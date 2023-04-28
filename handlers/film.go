@@ -5,10 +5,14 @@ import (
 	dto "backendtask/dto/result"
 	"backendtask/models"
 	"backendtask/repositories"
+	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
+	"github.com/cloudinary/cloudinary-go/v2"
+	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 )
@@ -29,9 +33,6 @@ func (h *handlerFilm) CariFilm(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, dto.ErrorResult{Code: http.StatusBadRequest, Message: err.Error()})
 	}
-	for i, m := range films {
-		films[i].ThumbnailFilm = path_file + m.ThumbnailFilm
-	}
 
 	return c.JSON(http.StatusOK, films)
 }
@@ -43,7 +44,6 @@ func (h *handlerFilm) DapatFilm(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, dto.ErrorResult{Code: http.StatusBadRequest, Message: err.Error()})
 	}
-	film.ThumbnailFilm = path_file + film.ThumbnailFilm
 
 	return c.JSON(http.StatusOK, dto.SuccesResult{Code: http.StatusOK, Data: convertResFilm(film)})
 }
@@ -69,9 +69,23 @@ func (h *handlerFilm) MembuatFilm(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, dto.ErrorResult{Code: http.StatusBadRequest, Message: err.Error()})
 	}
 
+	var ctx = context.Background()
+	var CLOUD_NAME = os.Getenv("CLOUD_NAME")
+	var API_KEY = os.Getenv("API_KEY")
+	var API_SECRET = os.Getenv("API_SECRET")
+
+	cld, _ := cloudinary.NewFromParams(CLOUD_NAME, API_KEY, API_SECRET)
+
+	// Upload file to Cloudinary ...
+	resp, err := cld.Upload.Upload(ctx, dataFile, uploader.UploadParams{Folder: "dumbflix"})
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
 	film := models.Film{
 		Title:         meminta.Title,
-		ThumbnailFilm: meminta.ThumbnailFilm,
+		ThumbnailFilm: resp.SecureURL,
 		Year:          meminta.Year,
 		CategoryId:    meminta.CategoryId,
 		Description:   meminta.Description,
@@ -89,16 +103,32 @@ func (h *handlerFilm) UpdateFilm(c echo.Context) error {
 	dataFile := c.Get("dataFile").(string)
 	fmt.Println("this is data file", dataFile)
 
+	var ctx = context.Background()
+	var CLOUD_NAME = os.Getenv("CLOUD_NAME")
+	var API_KEY = os.Getenv("API_KEY")
+	var API_SECRET = os.Getenv("API_SECRET")
+
+	// Add your Cloudinary credentials ...
+	cld, _ := cloudinary.NewFromParams(CLOUD_NAME, API_KEY, API_SECRET)
+
+	// Upload file to Cloudinary ...
+	resp, err := cld.Upload.Upload(ctx, dataFile, uploader.UploadParams{Folder: "dumbflix-img"})
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
 	categoryId, _ := strconv.Atoi(c.FormValue("categoryId"))
 	year, _ := strconv.Atoi(c.FormValue("year"))
 
 	meminta := filmsdto.CreatedFilmRequest{
 		Title:         c.FormValue("title"),
-		ThumbnailFilm: dataFile,
+		ThumbnailFilm: resp.SecureURL,
 		Year:          year,
 		CategoryId:    categoryId,
 		Description:   c.FormValue("description"),
 	}
+
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	user, err := h.FilmRepository.DapatFilm(id)
