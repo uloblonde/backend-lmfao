@@ -60,6 +60,7 @@ func (h *handlerAuth) Login(c echo.Context) error {
 	loginResponse := authdto.LoginResponse{
 		Email: user.Email,
 		Token: token,
+		Role:  user.Role,
 	}
 	return c.JSON(http.StatusOK, dto.SuccesResult{Code: http.StatusOK, Data: loginResponse})
 }
