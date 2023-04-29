@@ -36,6 +36,7 @@ func main() {
 	e.Static("/uploads", "./uploads")
 	routes.RouteInit(e.Group("/api/v1"))
 	var PORT = os.Getenv("PORT")
-	fmt.Println("server running localhost:" + PORT)
+	fmt.Println("Server berjalan di :" + PORT)
+
 	e.Logger.Fatal(e.Start(":" + PORT)) // delete localhost
 }
